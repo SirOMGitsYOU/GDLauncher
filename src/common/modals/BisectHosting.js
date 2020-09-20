@@ -47,11 +47,11 @@ const BisectHosting = () => {
               color: ${props => props.theme.palette.colors.green};
             `}
           >
-            GDL
+            VicariousNetwork
           </span>{' '}
           at checkout.
         </h2>
-        <a href="https://bisecthosting.com/gdl">
+        <a href="https://bisecthosting.com/VicariousNetwork">
           <Button
             type="primary"
             css={`
