@@ -76,8 +76,8 @@ const InstanceContainer = styled.div`
   font-size: 20px;
   overflow: hidden;
   height: 100%;
-  background: linear-gradient(0deg,rgba(0,0,0,0.8),rgba(0,0,0,0.8)),url("${props =>
-    props.background}") center no-repeat;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)),
+    url('${props => props.background}') center no-repeat;
   background-position: center;
   color: ${props => props.theme.palette.text.secondary};
   font-weight: 600;
@@ -227,7 +227,7 @@ const Instance = ({ instanceName }) => {
 
               {convertMinutesToHumanTime(instance.timePlayed)}
             </TimePlayed>
-            <MCVersion>{(instance.modloader || [])[1]}</MCVersion>
+            <MCVersion>{instance.loader?.mcVersion}</MCVersion>
             {instanceName}
           </InstanceContainer>
           <HoverContainer
@@ -329,9 +329,9 @@ const Instance = ({ instanceName }) => {
             disabled={
               Boolean(isInQueue) ||
               !(
-                instance.modloader[0] === FORGE ||
-                instance.modloader[0] === FABRIC ||
-                instance.modloader[0] === VANILLA
+                instance.loader?.loaderType === FORGE ||
+                instance.loader?.loaderType === FABRIC ||
+                instance.loader?.loaderType === VANILLA
               )
             }
           >

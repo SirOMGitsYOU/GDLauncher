@@ -61,7 +61,7 @@ To download the latest version, you can either click [here](https://github.com/g
 #### Our features:
 
 - Java downloader. You don't need to have java installed, a suitable version will be downloaded automatically.
-- It's as easy as pie to install the `vanilla` game, `forge`, `fabric`, and all `twitch modpacks`. No further action from the user is required.
+- It's as easy as pie to install the `vanilla` game, `forge`, `fabric`, and all `curseforge modpacks`. No further action from the user is required.
 - Install `mods` for both fabric and forge directly from our UI
 - Built-in auto-updater. The launcher will always keep itself updated to the latest release.
 - Easily manage multiple `accounts` and switch between them.
@@ -72,7 +72,6 @@ To download the latest version, you can either click [here](https://github.com/g
 - Import modpacks from other launchers
 - Keep track of the time you played each instance
 - Add instances to the download queue, they will automatically download one after the other
-- Manage your Minecraft skin directly from the launcher
 
 #### Some of the features we are still working on are:
 
@@ -80,6 +79,7 @@ To download the latest version, you can either click [here](https://github.com/g
 - Export instances to other launchers
 - Liteloader support
 - Optifine easy-installation support
+- Manage your Minecraft skin directly from the launcher
 - A lot more...
 
 ## 💾 Compilation
@@ -90,8 +90,9 @@ These are the steps to compile it yourself.
 
 You need the following software installed:
 
-- [NodeJS](https://nodejs.org/en/download/) (> v14.8.0 x64)
+- [NodeJS](https://nodejs.org/en/download/) (> v14.14.0 x64)
 - [Rust](https://www.rust-lang.org/)
+- [Python2](https://www.python.org/)(Mac and linux)
 - C++ compiler (g++ or windows build tools)
 
 ### ▶️ Steps

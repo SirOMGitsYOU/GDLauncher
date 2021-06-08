@@ -9,13 +9,14 @@ import Modal from '../../components/Modal';
 import Overview from './Overview';
 import { ipcRenderer } from 'electron';
 import Screenshots from './Screenshots';
+import ResourcePacks from './ResourcePacks';
 import Notes from './Notes';
 import Mods from './Mods';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { _getInstance, _getInstancesPath } from '../../utils/selectors';
-import { FORGE, FABRIC } from '../../utils/constants';
+import { FORGE, FABRIC, CURSEFORGE, FTB } from '../../utils/constants';
 import Modpack from './Modpack';
 import {
   initLatestMods,
@@ -144,6 +145,7 @@ const menuEntries = {
   mods: { name: 'Mods', component: Mods },
   modpack: { name: 'Modpack', component: Modpack },
   notes: { name: 'Notes', component: Notes },
+  resourcePacks: { name: 'Resource Packs', component: ResourcePacks },
   // resourcePacks: { name: "Resource Packs", component: Overview },
   // worlds: { name: "Worlds", component: Overview },
   screenshots: { name: 'Screenshots', component: Screenshots }
@@ -206,7 +208,7 @@ const InstanceManager = ({ instanceName }) => {
   }, []);
 
   useEffect(() => {
-    if ((instance?.modloader || []).slice(3, 5).length === 2) {
+    if (instance?.loader.source === CURSEFORGE) {
       fse
         .readJson(path.join(instancesPath, instanceName, 'manifest.json'))
         .then(setManifest)
@@ -219,6 +221,8 @@ const InstanceManager = ({ instanceName }) => {
       dispatch(initLatestMods(instance.name));
     }
   }, [instance?.mods]);
+
+
 
   return (
     <Modal
@@ -254,10 +258,10 @@ const InstanceManager = ({ instanceName }) => {
             {Object.entries(menuEntries).map(([k, tab]) => {
               if (
                 (tab.name === menuEntries.mods.name &&
-                  instance?.modloader[0] !== FORGE &&
-                  instance?.modloader[0] !== FABRIC) ||
+                  instance?.loader?.loaderType !== FORGE &&
+                  instance?.loader?.loaderType !== FABRIC) ||
                 (tab.name === menuEntries.modpack.name &&
-                  !instance?.modloader[3])
+                  !instance?.loader?.fileID)
               ) {
                 return null;
               }
@@ -276,7 +280,8 @@ const InstanceManager = ({ instanceName }) => {
         <Content>
           <ContentComponent
             instanceName={instanceName}
-            modpackId={instance?.modloader[3]}
+            modpackId={instance?.loader?.projectID}
+            fileID={instance?.loader?.fileID}
             background={background}
             manifest={manifest}
           />

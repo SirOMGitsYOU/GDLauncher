@@ -13,6 +13,7 @@ const ChangeLogs = () => {
   useEffect(() => {
     ipcRenderer.invoke('getAppVersion').then(setVersion).catch(console.error);
   }, []);
+
   return (
     <Modal
       css={`
@@ -22,7 +23,7 @@ const ChangeLogs = () => {
       title={`What's new in ${version}`}
     >
       <Container>
-        <Section>
+        {/* <Section>
           <SectionTitle
             css={`
               color: ${props => props.theme.palette.colors.green};
@@ -32,11 +33,15 @@ const ChangeLogs = () => {
           </SectionTitle>
           <div>
             <ul>
-              <li>Restyled the UI to add new instances.</li>
-              <li>Some performance improvements.</li>
+              <li>
+                Automatically set recommended/minimum RAM amount for FTB
+                modpacks, and eventually show a confirmation modal in case the
+                user has not enough.
+              </li>
+              <li>Added modlist.html when exporting instances.</li>
             </ul>
           </div>
-        </Section>
+        </Section> */}
         <Section>
           <SectionTitle
             css={`
@@ -47,9 +52,9 @@ const ChangeLogs = () => {
           </SectionTitle>
           <div>
             <ul>
-              <li>Security fixes.</li>
-              <li>Improved login errors.</li>
-              <li>The news should now be up to date.</li>
+              <li>Fixed FTB downloads.</li>
+              <li>Fixed macOS menu.</li>
+              <li>Other minor fixes.</li>
             </ul>
           </div>
         </Section>
@@ -67,13 +72,11 @@ const ChangeLogs = () => {
           </p>
           <Button
             css={`
-              width: 200px;
-              height: 40px;
               font-size: 20px;
-              padding: 4px !important;
               margin-top: 20px;
             `}
             type="primary"
+            size="large"
             href="https://discord.gg/4cGYzen"
           >
             <FontAwesomeIcon icon={faDiscord} />

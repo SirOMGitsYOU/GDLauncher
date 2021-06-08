@@ -1,35 +1,64 @@
 /* eslint-disable */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import { useDispatch } from 'react-redux';
 import ReactHtmlParser from 'react-html-parser';
+import ReactMarkdown from 'react-markdown';
+import { shell } from 'electron';
+import { faExternalLinkAlt, faInfo } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Checkbox, TextField, Cascader, Button, Input, Select } from 'antd';
 import Modal from '../components/Modal';
 import { transparentize } from 'polished';
-import { getAddonDescription, getAddonFiles } from '../api';
+import {
+  getAddonDescription,
+  getAddonFiles,
+  getAddonFileChangelog
+} from '../api';
 import CloseButton from '../components/CloseButton';
-import { closeModal } from '../reducers/modals/actions';
-import { FORGE, CURSEFORGE_URL } from '../utils/constants';
+import { closeModal, openModal } from '../reducers/modals/actions';
+import { FORGE, CURSEFORGE_URL, FTB_MODPACK_URL } from '../utils/constants';
+import { formatNumber, formatDate } from '../utils';
 
-const AddInstance = ({ modpack, setStep, setModpack, setVersion }) => {
+const ModpackDescription = ({
+  modpack,
+  setStep,
+  setModpack,
+  setVersion,
+  type
+}) => {
   const dispatch = useDispatch();
-  const [description, setDescription] = useState(null);
+  const [description, setDescription] = useState('');
   const [files, setFiles] = useState(null);
   const [selectedId, setSelectedId] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    getAddonDescription(modpack.id).then(data => {
-      // Replace the beginning of all relative URLs with the Curseforge URL
-      const modifiedData = data.data.replace(/href="(?!http)/g, `href="${CURSEFORGE_URL}`)
+    const init = async () => {
+      setLoading(true);
+      if (type === 'curseforge') {
+        await Promise.all([
+          getAddonDescription(modpack.id).then(data => {
+            // Replace the beginning of all relative URLs with the Curseforge URL
+            const modifiedData = data.data.replace(
+              /href="(?!http)/g,
+              `href="${CURSEFORGE_URL}`
+            );
 
-      setDescription(modifiedData)
-    });
-    getAddonFiles(modpack.id).then(data => {
-      setFiles(data.data);
-      setLoading(false);
-    });
+            setDescription(modifiedData);
+          }),
+          getAddonFiles(modpack.id).then(async data => {
+            setFiles(data.data);
+            setLoading(false);
+          })
+        ]);
+      } else if (type === 'ftb') {
+        setDescription(modpack.description);
+        setFiles(modpack.versions.slice().reverse());
+        setLoading(false);
+      }
+    };
+    init();
   }, []);
 
   const handleChange = value => setSelectedId(value);
@@ -37,6 +66,7 @@ const AddInstance = ({ modpack, setStep, setModpack, setVersion }) => {
   const getReleaseType = id => {
     switch (id) {
       case 1:
+      case 'Release':
         return (
           <span
             css={`
@@ -47,6 +77,7 @@ const AddInstance = ({ modpack, setStep, setModpack, setVersion }) => {
           </span>
         );
       case 2:
+      case 'Beta':
         return (
           <span
             css={`
@@ -57,6 +88,7 @@ const AddInstance = ({ modpack, setStep, setModpack, setVersion }) => {
           </span>
         );
       case 3:
+      case 'Alpha':
       default:
         return (
           <span
@@ -70,7 +102,27 @@ const AddInstance = ({ modpack, setStep, setModpack, setVersion }) => {
     }
   };
 
-  const primaryImage = modpack.attachments.find(v => v.isDefault);
+  const parseLink = string => {
+    const newName = string
+      .replace(/\+/, 'plus')
+      .replace(/-+/, 'minus')
+      .replace(/[^0-9a-z]/gi, '_')
+      .replace(/_+/, '_');
+    return `${FTB_MODPACK_URL}/${newName}`;
+  };
+
+  const primaryImage = useMemo(() => {
+    if (type === 'curseforge') {
+      return modpack.attachments.find(v => v.isDefault).thumbnailUrl;
+    } else if (type === 'ftb') {
+      const image = modpack.art.reduce((prev, curr) => {
+        if (!prev || curr.size < prev.size) return curr;
+        return prev;
+      });
+      return image.url;
+    }
+  }, [modpack, type]);
+
   return (
     <Modal
       css={`
@@ -85,10 +137,88 @@ const AddInstance = ({ modpack, setStep, setModpack, setVersion }) => {
           <CloseButton onClick={() => dispatch(closeModal())} />
         </StyledCloseButton>
         <Container>
-          <Parallax bg={primaryImage.thumbnailUrl}>
-            <ParallaxContent>{modpack.name}</ParallaxContent>
+          <Parallax bg={primaryImage}>
+            <ParallaxContent>
+              <ParallaxInnerContent>
+                {modpack.name}
+                <ParallaxContentInfos>
+                  <div>
+                    <label>Author: </label>
+                    {modpack.authors[0].name}
+                  </div>
+                  <div>
+                    <label>Downloads: </label>
+                    {type === 'ftb'
+                      ? formatNumber(modpack.installs)
+                      : formatNumber(modpack.downloadCount)}
+                  </div>
+                  <div>
+                    <label>Last Update: </label>
+                    {type === 'ftb'
+                      ? formatDate(modpack.refreshed * 1000)
+                      : formatDate(modpack.dateModified)}
+                  </div>
+                  <div>
+                    <label>MC version: </label>
+                    {type === 'ftb'
+                      ? modpack.tags[0]?.name || '-'
+                      : modpack.gameVersionLatestFiles[0].gameVersion}
+                  </div>
+                </ParallaxContentInfos>
+                <Button
+                  href={
+                    type === 'ftb'
+                      ? parseLink(modpack.name)
+                      : modpack.websiteUrl
+                  }
+                  css={`
+                    position: absolute;
+                    top: 20px;
+                    left: 20px;
+                    width: 30px;
+                    height: 30px;
+                    display: flex;
+                    justify-content: center;
+                  `}
+                  type="primary"
+                >
+                  <FontAwesomeIcon icon={faExternalLinkAlt} />
+                </Button>
+                <Button
+                  disabled={loading}
+                  onClick={() => {
+                    dispatch(
+                      openModal('ModChangelog', {
+                        modpackId: modpack.id,
+                        modpackName: modpack.name,
+                        files,
+                        type
+                      })
+                    );
+                  }}
+                  css={`
+                    position: absolute;
+                    top: 20px;
+                    left: 60px;
+                    width: 30px;
+                    height: 30px;
+                    display: flex;
+                    justify-content: center;
+                  `}
+                  type="primary"
+                >
+                  <FontAwesomeIcon icon={faInfo} />
+                </Button>
+              </ParallaxInnerContent>
+            </ParallaxContent>
           </Parallax>
-          <Content>{ReactHtmlParser(description)}</Content>
+          <Content>
+            {type === 'ftb' ? (
+              <ReactMarkdown>{description}</ReactMarkdown>
+            ) : (
+              ReactHtmlParser(description)
+            )}
+          </Content>
         </Container>
         <Footer>
           <div
@@ -105,10 +235,15 @@ const AddInstance = ({ modpack, setStep, setModpack, setVersion }) => {
               listHeight={400}
               loading={loading}
               disabled={loading}
+              virtual={false}
             >
               {(files || []).map(file => (
                 <Select.Option
-                  title={file.displayName}
+                  title={
+                    type === 'ftb'
+                      ? `${modpack.name} - ${file.name}`
+                      : file.displayName
+                  }
                   key={file.id}
                   value={file.id}
                 >
@@ -125,7 +260,9 @@ const AddInstance = ({ modpack, setStep, setModpack, setVersion }) => {
                         align-items: center;
                       `}
                     >
-                      {file.displayName}
+                      {type === 'ftb'
+                        ? `${modpack.name} - ${file.name}`
+                        : file.displayName}
                     </div>
                     <div
                       css={`
@@ -135,8 +272,16 @@ const AddInstance = ({ modpack, setStep, setModpack, setVersion }) => {
                         flex-direction: column;
                       `}
                     >
-                      <div>{file.gameVersion[0]}</div>
-                      <div>{getReleaseType(file.releaseType)}</div>
+                      <div>
+                        {type === 'ftb'
+                          ? modpack.tags[0]?.name || '-'
+                          : file.gameVersion[0]}
+                      </div>
+                      <div>
+                        {getReleaseType(
+                          type === 'ftb' ? file.type : file.releaseType
+                        )}
+                      </div>
                     </div>
                     <div
                       css={`
@@ -146,12 +291,13 @@ const AddInstance = ({ modpack, setStep, setModpack, setVersion }) => {
                       `}
                     >
                       <div>
-                        {new Date(file.fileDate).toLocaleDateString(undefined, {
+                        {new Date(
+                          type === 'ftb' ? file.updated * 1000 : file.fileDate
+                        ).toLocaleDateString(undefined, {
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric'
                         })}
-                        
                       </div>
                     </div>
                   </div>
@@ -164,10 +310,15 @@ const AddInstance = ({ modpack, setStep, setModpack, setVersion }) => {
             disabled={!selectedId}
             onClick={() => {
               const modpackFile = files.find(file => file.id === selectedId);
-              dispatch(closeModal());
-              setVersion([FORGE, modpack.id, modpackFile.id]);
+              setVersion({
+                loaderType: FORGE,
+                projectID: modpack.id,
+                fileID: modpackFile.id,
+                source: type
+              });
               setModpack(modpack);
               setStep(1);
+              dispatch(closeModal());
             }}
           >
             Download
@@ -178,7 +329,7 @@ const AddInstance = ({ modpack, setStep, setModpack, setVersion }) => {
   );
 };
 
-export default React.memo(AddInstance);
+export default React.memo(ModpackDescription);
 
 const StyledSelect = styled(Select)`
   width: 650px;
@@ -234,6 +385,21 @@ const Parallax = styled.div`
   background-size: cover;
 `;
 
+const ParallaxInnerContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  a {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+  }
+`;
+
 const ParallaxContent = styled.div`
   height: 100%;
   width: 100%;
@@ -243,8 +409,24 @@ const ParallaxContent = styled.div`
   font-weight: bold;
   font-size: 60px;
   text-align: center;
-  padding-top: 20%;
   background: rgba(0, 0, 0, 0.8);
+`;
+
+const ParallaxContentInfos = styled.div`
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: normal;
+  font-size: 12px;
+  position: absolute;
+  bottom: 40px;
+  div {
+    margin: 0 5px;
+    label {
+      font-weight: bold;
+    }
+  }
 `;
 
 const Content = styled.div`

@@ -108,13 +108,20 @@ const commonConfig = {
       private: false
     },
     generateUpdatesFilesForAllChannels: true,
+    npmRebuild: false,
     productName: 'GDLauncher',
     appId: 'org.gorilladevs.GDLauncher',
     files: [
       '!node_modules/**/*',
-      'node_modules/7zip-bin/linux/x64/7za',
-      'node_modules/7zip-bin/mac/7za',
-      'node_modules/7zip-bin/win/x64/7za.exe',
+      ...(process.platform === 'linux'
+        ? ['node_modules/7zip-bin/linux/x64/7za']
+        : []),
+      ...(process.platform === 'darwin'
+        ? ['node_modules/7zip-bin/mac/7za']
+        : []),
+      ...(process.platform === 'win32'
+        ? ['node_modules/7zip-bin/win/x64/7za.exe']
+        : []),
       'build/**/*',
       'package.json',
       'public/icon.png'
@@ -159,6 +166,10 @@ const commonConfig = {
       differentialPackage: true,
       include: './public/installer.nsh'
     },
+    mac: {
+      entitlements: './entitlements.mac.plist',
+      entitlementsInherit: './entitlements.mac.plist'
+    },
     /* eslint-disable */
     artifactName: `${'${productName}'}-${'${os}'}-${
       process.argv[2]
@@ -170,7 +181,14 @@ const commonConfig = {
     directories: {
       buildResources: 'public',
       output: 'release'
-    }
+    },
+    protocols: [
+      {
+        name: 'gdlauncher',
+        role: 'Viewer',
+        schemes: ['gdlauncher']
+      }
+    ]
   },
   ...((!process.env.RELEASE_TESTING || process.platform === 'linux') && {
     linux:
@@ -179,7 +197,7 @@ const commonConfig = {
         : ['snap:x64']
   }),
   ...((!process.env.RELEASE_TESTING || process.platform === 'win32') && {
-    win: [type === 'setup' ? 'nsis-web:x64' : 'zip:x64']
+    win: [type === 'setup' ? 'nsis:x64' : 'zip:x64']
   }),
   ...((!process.env.RELEASE_TESTING || process.platform === 'darwin') && {
     mac: type === 'setup' ? ['dmg:x64'] : []
@@ -202,12 +220,6 @@ const main = async () => {
 
   const { productName } = commonConfig.config;
 
-  const { version } = await fse.readJson(
-    path.resolve(__dirname, '../', 'package.json')
-  );
-
-  const nsisWeb7z = `${productName}-${version}-${process.arch}.nsis.7z`;
-
   const allFiles = {
     setup: {
       darwin: [
@@ -216,9 +228,9 @@ const main = async () => {
         'latest-mac.yml'
       ],
       win32: [
-        path.join('nsis-web', `${productName}-win-${type}.exe`),
-        path.join('nsis-web', nsisWeb7z),
-        path.join('nsis-web', 'latest.yml')
+        path.join(`${productName}-win-${type}.exe`),
+        path.join(`${productName}-win-${type}.exe.blockmap`),
+        path.join('latest.yml')
       ],
       linux: [
         `${productName}-linux-${type}.zip`,
